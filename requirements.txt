@@ -1,0 +1,38 @@
+# DFER-GCViT Occlusion Robustness Project
+# Install with: pip install -r requirements.txt
+
+# Core deep learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# GC-ViT pretrained model
+timm>=0.9.0
+
+# Data handling
+numpy>=1.24.0
+h5py>=3.8.0
+
+# Image processing
+opencv-python>=4.7.0
+Pillow>=9.5.0
+scikit-image>=0.20.0
+
+# Evaluation metrics
+scikit-learn>=1.2.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilities
+tqdm>=4.65.0
+pandas>=2.0.0
+
+# Face detection (MTCNN for preprocessing)
+facenet-pytorch>=2.5.3
+
+# ViT variants used in professor's scripts
+vit-pytorch>=1.6.6
+
+# Model summary (used in gcvitt.py)
+torchsummary>=1.5.1

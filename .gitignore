@@ -1,0 +1,29 @@
+# Model checkpoints (too large for GitHub)
+results/baseline/*.pth
+results/occluded/*.pth
+*.pth
+
+# HDF5 datasets (generated locally, ~160MB each)
+KMUtada/
+
+# Raw dataset images
+datasets/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
