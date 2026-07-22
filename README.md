@@ -64,7 +64,7 @@ All values are averaged over 10 folds. Full per-fold results are in `results/eva
 
 ## Methodology
 
-![Methodology Diagram](visualisations/architecture.png)
+![Methodology Diagram](visualisations/methodology_diagram.png)
 
 **Dataset:** KMU-FED (Jeong and Ko, Sensors 2018) — 1,106 near-infrared driver face images across 6 emotion classes (Anger, Disgust, Fear, Happy, Sadness, Surprise). Face regions detected and cropped to 224x224 using MTCNN.
 

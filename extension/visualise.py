@@ -136,8 +136,8 @@ def chart_f1():
     conditions = ['Clean', 'Eye Occluded', 'Mouth Occluded']
     x = np.arange(len(conditions)); w = 0.35
     fig, ax = plt.subplots(figsize=(10, 6))
-    b1 = ax.bar(x - w/2, data['Baseline'], w, label='Baseline',       color='steelblue')
-    b2 = ax.bar(x + w/2, data['Occluded'], w, label='Occluded Model', color='coral')
+    b1 = ax.bar(x - w/2, data['Baseline'], w, label='Model A (Baseline)',  color='steelblue')
+    b2 = ax.bar(x + w/2, data['Occluded'], w, label='Model B (Occluded)', color='coral')
     ax.set_ylabel('Macro F1 Score (%)', fontsize=12)
     ax.set_title('Macro F1 Score: Baseline vs Occlusion-Augmented Model', fontsize=13)
     ax.set_xticks(x); ax.set_xticklabels(conditions, fontsize=11)
