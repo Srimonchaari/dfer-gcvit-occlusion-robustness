@@ -13,16 +13,25 @@ Reimplementation and extension of DFER-GCViT (Saadi et al., IEEE CVMI 2023)
 
 - **Author:** Srimonchaari Padmanabhan Babu
 - **Institution:** BTU Cottbus-Senftenberg, Faculty of Graphical Systems
-- **Supervisor:** Prof. Douglas W. Cunningham
+- **First Supervisor:** Dr. Ibtissam Saadi
+- **Second Supervisor:** Prof. Douglas W. Cunningham
 - **Dataset:** KMU-FED (Near-Infrared Driver Face Images)
 
 ---
 
 ## What This Is
 
-The paper by Saadi et al. (IEEE CVMI 2023) built a facial expression recognition system for drivers using GC-ViT and got 98.27% accuracy on the KMU-FED dataset. But it never tested what happens when a driver wears sunglasses or a surgical mask.
+Saadi et al. (IEEE CVMI 2023) built a driver facial expression recognition system using the Global Context Vision Transformer (GC-ViT) and reported 98.27% accuracy on the KMU-FED dataset. The original study did not evaluate robustness under occlusion — what happens when a driver wears sunglasses or a surgical mask.
 
-This project takes that paper's code, runs it on KMU-FED, and then adds a robustness test using synthetic occlusion. We trained two versions of the model and compared how much each one suffers when part of the face is blocked.
+This research module reimplements the architecture described in that paper using the timm GC-ViT Base backbone with a modified classifier head, evaluates it on KMU-FED under the same conditions, and extends it with a synthetic occlusion study. Two model variants are trained and compared across three test conditions: clean, eye-occluded and mouth-occluded.
+
+---
+
+## Occlusion Conditions
+
+The images below show how synthetic occlusion is applied to each of the 6 emotion classes in KMU-FED. The black rectangles simulate sunglasses (eye region) and a surgical mask (mouth region).
+
+![Sample Conditions](visualisations/8_sample_conditions.png)
 
 ---
 
@@ -51,7 +60,7 @@ NIR Face Image (224x224)
         |
    MTCNN Crop
         |
- GC-ViT Base Backbone  (pretrained ImageNet)
+ GC-ViT Base Backbone  (pretrained ImageNet, via timm)
    Stage 1: Local Attention + Global Attention + FusedMBConv + MaxPool
    Stage 2: Local Attention + Global Attention + FusedMBConv + MaxPool
    Stage 3: Local Attention + Global Attention + FusedMBConv + MaxPool
@@ -59,7 +68,7 @@ NIR Face Image (224x224)
         |
  Global Average Pooling  [Batch, 1024]
         |
- Modified Classifier Head
+ Modified Classifier Head (replaces original fc layer)
    Linear(1024 -> 512)
    BatchNorm1d(512)
    ReLU
@@ -69,7 +78,7 @@ NIR Face Image (224x224)
  6 Classes: Anger | Disgust | Fear | Happy | Sadness | Surprise
 ```
 
-The connection between backbone and our head is one line in `models/gcvitt.py`:
+The classifier head replaces the original fully connected layer in one line in `models/gcvitt.py`:
 ```python
 self.model.head.fc = new_layers
 ```
@@ -78,7 +87,7 @@ self.model.head.fc = new_layers
 
 ## The Extension
 
-We applied two types of synthetic occlusion on 224×224 face crops:
+Two types of synthetic occlusion are applied programmatically on 224x224 face crops with no manual labelling:
 
 ```python
 # Simulates sunglasses
@@ -94,7 +103,17 @@ def apply_mouth_occlusion(image):
     return occluded
 ```
 
-50% of training images were occluded (25% eye, 25% mouth per class) to build Model B (occluded model). Both models are always tested on clean images from `baseline.h5`; occlusion is applied in memory at test time.
+**Model A** trains on clean images only. **Model B** trains with 50% of images occluded (25% eye, 25% mouth per class). Both models are tested on clean images from `baseline.h5`; occlusion is applied in memory at test time only.
+
+---
+
+## Where the Model Looks
+
+The heatmap below shows occlusion sensitivity maps for Model A across all 6 emotion classes. Red regions indicate where the model relies most for its prediction. Mouth dominance in Happy, Anger and Surprise explains why mouth occlusion causes such a large accuracy drop.
+
+![Occlusion Sensitivity Heatmap](visualisations/7_attention_heatmap.png)
+
+*Generated using sliding window occlusion sensitivity (16x16 patch) on the baseline model (fold 1).*
 
 ---
 
@@ -108,9 +127,9 @@ def apply_mouth_occlusion(image):
 | Eye Drop | 3.18 pp | 2.73 pp |
 | Mouth Drop | **60.36 pp** | **18.73 pp** |
 
-Occlusion-aware training reduced the mouth occlusion accuracy drop from 60.36 to 18.73 percentage points — a **41.6 pp gain in robustness** — at a cost of 2.37 pp on clean accuracy.
+Occlusion-aware training reduced the mouth occlusion accuracy drop from 60.36 to 18.73 percentage points, a 41.6 pp recovery, at a cost of only 2.37 pp on clean accuracy.
 
-Eye occlusion barely affects either model because GC-ViT's global attention compensates using mouth and cheek regions. Mouth occlusion is catastrophic for the baseline because most expressions (Happy, Surprise, Anger) rely heavily on mouth signals.
+Eye occlusion barely affects either model because GC-ViT global attention compensates using other facial regions. Mouth occlusion is catastrophic for the baseline because expressions like Happy, Surprise and Anger rely heavily on mouth signals.
 
 ![Accuracy Drop](visualisations/2_accuracy_drop.png)
 ![Per-Fold Accuracy](visualisations/4_per_fold_accuracy.png)
@@ -120,7 +139,7 @@ Eye occlusion barely affects either model because GC-ViT's global attention comp
 ## Project Structure
 
 ```
-occlusion-robust-dfer/
+dfer-gcvit-occlusion-robustness/
 |
 +-- models/
 |   +-- gcvitt.py              GC-ViT Base + modified 5-layer classifier head
@@ -186,7 +205,7 @@ cd extension
 python visualise.py
 ```
 
-> Note: HDF5 files (`KMUtada/baseline.h5`, `KMUtada/occluded.h5`) and model checkpoints (`results/**/*.pth`) are excluded from this repo — they exceed GitHub file limits. Run the scripts above to regenerate them.
+> Note: HDF5 files (`KMUtada/baseline.h5`, `KMUtada/occluded.h5`) and model checkpoints (`results/**/*.pth`) are excluded from this repo as they exceed GitHub file limits. Run the scripts above to regenerate them.
 
 ---
 
@@ -197,12 +216,12 @@ python visualise.py
 | Optimizer | Adam |
 | Learning rate | 0.0001 |
 | LR Schedule | CosineAnnealingLR (T_max=60, eta_min=1e-6) |
-| Batch size | 64 effective (gradient accumulation 16×4) |
+| Batch size | 64 effective (gradient accumulation 16x4) |
 | Epochs | 60 |
 | Folds | 10-fold stratified cross-validation |
 | Precision | Mixed (AMP fp16 + fp32) |
 
-Gradient accumulation was needed because GC-ViT Base with batch 64 exceeds 8 GB VRAM. Running 4 batches of 16 and accumulating gradients gives the same result mathematically.
+Gradient accumulation was used because GC-ViT Base with batch size 64 exceeds 8 GB VRAM. Running 4 batches of 16 with accumulated gradients gives the same result mathematically.
 
 ---
 
